@@ -1,4 +1,6 @@
+from typing import Iterable
 from faster_whisper import WhisperModel
+from faster_whisper.transcribe import Segment
 from speech_recognition import AudioData, Microphone, Recognizer
 
 DEFAULT_MODEL = "base.en"
@@ -24,3 +26,7 @@ class AudioTransformer:
 
     def transcribe(self, path: str):
         return self.model.transcribe(path, beam_size=5)
+
+    @staticmethod
+    def join_segments(segments: Iterable[Segment]) -> str:
+        return " ".join(segment.text for segment in segments)
