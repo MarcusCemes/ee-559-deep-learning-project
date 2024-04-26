@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>EE-559 Deep Learning Miniproject</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Jersey+15&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root,
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+
+        font-family: "Jersey 15", sans-serif;
+        font-weight: 400;
+        font-style: normal;
+        font-size: 2rem;
+
+        color: #fff;
+      }
+
+      body.connecting {
+        background: #d97706;
+      }
+
+      body.idle {
+        background: #0d9488;
+      }
+
+      body.recording {
+        background: #4f46e5;
+      }
+
+      body.good {
+        background: #16a34a;
+      }
+
+      body.bad {
+        background: #dc2626;
+      }
+
+      body.disconnected {
+        background: #c026d3;
+      }
+    </style>
+  </head>
+  <body x-data :class="$store.status">
+    <div>
+      <h1 x-text="getMessage($store.status)"></h1>
+    </div>
+
+    <script src="//unpkg.com/alpinejs" defer></script>
+
+    <script>
+      document.addEventListener("alpine:init", () => {
+        Alpine.store("status", "connecting");
+      });
+
+      window.addEventListener("load", (event) => {
+        const ws = new WebSocket("ws://localhost:8080/ws");
+
+        ws.addEventListener("message", (event) => {
+          Alpine.store("status", event.data);
+        });
+      });
+
+      function getMessage(status) {
+        switch (status) {
+          case "connecting":
+            return "Connecting...";
+
+          case "idle":
+            return "Waiting...";
+
+          case "good":
+            return "Good job!";
+
+          case "bad":
+            return "Bad job!";
+
+          case "disconnected":
+            return "Disconnected!";
+
+          default:
+            console.log("Status: " + status);
+            return "Unknown status!";
+        }
+      }
+    </script>
+  </body>
+</html>

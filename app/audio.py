@@ -1,7 +1,7 @@
 from typing import Iterable
 from faster_whisper import WhisperModel
 from faster_whisper.transcribe import Segment
-from speech_recognition import AudioData, Microphone, Recognizer
+from speech_recognition import AudioData, AudioFile, Microphone, Recognizer
 
 DEFAULT_MODEL = "base.en"
 
@@ -13,6 +13,10 @@ class AudioRecorder:
     def record(self) -> AudioData:
         with Microphone() as source:
             return self.recogniser.listen(source)
+
+    def load_file(self, path: str) -> AudioData:
+        with AudioFile(path) as source:
+            return self.recogniser.record(source)
 
     @staticmethod
     def save_wav(data: AudioData, path: str):
