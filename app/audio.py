@@ -1,5 +1,4 @@
 from typing import Iterable
-from faster_whisper import WhisperModel
 from faster_whisper.transcribe import Segment
 from speech_recognition import AudioData, AudioFile, Microphone, Recognizer
 
@@ -26,6 +25,8 @@ class AudioRecorder:
 
 class AudioTransformer:
     def __init__(self, model=DEFAULT_MODEL):
+        from faster_whisper import WhisperModel
+
         self.model = WhisperModel(model, device="cuda", compute_type="float16")
 
     def transcribe(self, path: str):

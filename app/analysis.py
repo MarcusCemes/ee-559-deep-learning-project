@@ -1,6 +1,6 @@
-from transformers import BertConfig, BertModel, BertTokenizer
 from torch import load, no_grad
 from torch.nn import Dropout, Linear, Module
+from transformers import BertConfig, BertModel, BertTokenizer
 
 TRANSFORM_COLUMNS = [
     "respect",
@@ -12,6 +12,26 @@ TRANSFORM_COLUMNS = [
     "genocide",
     "attack_defend",
 ]
+
+
+class Analyser:
+
+    def __init__(self):
+        self.tokenizer = BertTokenizer.from_pretrained("./tmp/hateBERT")
+
+        config = BertConfig.from_pretrained("./tmp/hateBERT/config.json")
+
+        self.model = MultilabelHateBert(BertModel(config))
+        self.model.load_state_dict(load("./tmp/hateBERT_weights"))
+        self.model.to("cuda")
+        self.model.eval()
+
+    def classify(self, text: str):
+        input = self.tokenizer(text, padding=True, truncation=True, return_tensors="pt")
+        input.to("cuda")
+
+        with no_grad():
+            return self.model(**input)
 
 
 class MultilabelHateBert(Module):
@@ -31,23 +51,3 @@ class MultilabelHateBert(Module):
         out = self.linear(out)
 
         return out
-
-
-class Analyser:
-
-    def __init__(self):
-        self.tokenizer = BertTokenizer.from_pretrained("./tmp/hateBERT")
-
-        config = BertConfig.from_pretrained("./tmp/hateBERT/config.json")
-
-        self.model = MultilabelHateBert(BertModel(config))
-        self.model.load_state_dict(load("./tmp/hateBERT_weights"))
-        self.model.cuda()
-        self.model.eval()
-
-    def classify(self, text: str):
-        input = self.tokenizer(text, padding=True, truncation=True, return_tensors="pt")
-        input.cuda()
-
-        with no_grad():
-            return self.model(**input)

@@ -1,4 +1,7 @@
-from aiohttp import web
+from os.path import isfile
+from weakref import WeakSet
+
+from aiohttp import WSCloseCode, web
 
 
 class Server:
@@ -6,13 +9,19 @@ class Server:
     def __init__(self):
         self.app = web.Application()
         self.runner = web.AppRunner(self.app)
-        self.sockets = set()
-        self.status = "idle"
+        self.sockets = WeakSet()
 
-        self.app.add_routes([web.get("/", self.handle), web.get("/ws", self.socket)])
+        self.state = {"status": "idle", "text": None}
+
+        self.app.add_routes(
+            [web.get("/ws", self.socket), web.get("/{tail:.*}", self.handle)]
+        )
+
+        self.app.on_shutdown.append(self.on_shutdown)
 
     async def __aenter__(self):
         await self.runner.setup()
+        self.runner._shutdown_timeout = 3
 
         site = web.TCPSite(self.runner, "0.0.0.0", 8080)
         await site.start()
@@ -20,28 +29,51 @@ class Server:
         return self
 
     async def __aexit__(self, *_):
-        await self.app.shutdown()
+        print("Stopping server...")
         await self.runner.cleanup()
 
-    async def broadcast(self, status: str):
-        for ws in self.sockets:
-            await ws.send_str(status)
+    async def on_shutdown(self, _):
+        for ws in set(self.sockets):
+            await ws.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
 
-    async def handle(self, _: web.Request):
-        return web.FileResponse("assets/index.html")
+    async def set_status(self, status: str):
+        self.state["status"] = status
+        await self.broadcast()
+
+    async def set_text(self, text: str | None):
+        self.state["text"] = text
+        await self.broadcast()
+
+    async def broadcast(self):
+        for ws in self.sockets:
+            await ws.send_json(self.state)
+
+    async def handle(self, request: web.Request):
+        path = "/index.html" if request.path == "/" else request.path
+        path = f"assets{path}"
+
+        if ".." in path:
+            raise web.HTTPForbidden()
+
+        if not isfile(path):
+            raise web.HTTPNotFound()
+
+        return web.FileResponse(path)
 
     async def socket(self, request: web.Request):
+
         ws = web.WebSocketResponse()
+        await ws.prepare(request)
+
         self.sockets.add(ws)
 
         try:
-            await ws.prepare(request)
-            await ws.send_str("idle")
+            await ws.send_json(self.state)
 
             async for _ in ws:
                 pass
 
         finally:
-            self.sockets.remove(ws)
+            self.sockets.discard(ws)
 
         return ws
