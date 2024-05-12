@@ -21,7 +21,16 @@ class Robot:
             self.client.__exit__(*args)
 
     async def dance(self):
+        if not self.client:
+            return
+
         print("Dancing!")
+
+        print("Moving towards!")
+
+        await self.send({"motor.left.target": [200], "motor.right.target": [200]})
+        await sleep(2)
+        await self.send({"motor.left.target": [0], "motor.right.target": [0]})
 
     async def move_away(self):
         if not self.client:
@@ -36,5 +45,5 @@ class Robot:
     async def send(self, commands: dict):
         assert self.client
 
-        with await self.client.lock(wait_for_busy_node=False) as node:
+        with await self.client.lock(wait_for_busy_node=False) as node:  # type: ignore
             await node.set_variables(commands)

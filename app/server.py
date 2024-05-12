@@ -1,7 +1,10 @@
+from dataclasses import asdict
 from os.path import isfile
 from weakref import WeakSet
 
 from aiohttp import WSCloseCode, web
+
+from .state import state
 
 
 class Server:
@@ -10,8 +13,6 @@ class Server:
         self.app = web.Application()
         self.runner = web.AppRunner(self.app)
         self.sockets = WeakSet()
-
-        self.state = {"status": "idle", "text": None}
 
         self.app.add_routes(
             [web.get("/ws", self.socket), web.get("/{tail:.*}", self.handle)]
@@ -36,17 +37,9 @@ class Server:
         for ws in set(self.sockets):
             await ws.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
 
-    async def set_status(self, status: str):
-        self.state["status"] = status
-        await self.broadcast()
-
-    async def set_text(self, text: str | None):
-        self.state["text"] = text
-        await self.broadcast()
-
     async def broadcast(self):
         for ws in self.sockets:
-            await ws.send_json(self.state)
+            await ws.send_json(asdict(state))
 
     async def handle(self, request: web.Request):
         path = "/index.html" if request.path == "/" else request.path
@@ -68,7 +61,7 @@ class Server:
         self.sockets.add(ws)
 
         try:
-            await ws.send_json(self.state)
+            await ws.send_json(asdict(state))
 
             async for _ in ws:
                 pass

@@ -1,0 +1,18 @@
+@import url("https://fonts.googleapis.com/css2?family=Jersey+15&family=Jersey+15+Charted&display=swap");
+
+:root {
+  font-family: "Jersey 15", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background-color: #000;
+}
+
+#app {
+  display: contents;
+}

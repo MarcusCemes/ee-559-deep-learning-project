@@ -1,6 +1,12 @@
 from typing import Iterable
 from faster_whisper.transcribe import Segment
-from speech_recognition import AudioData, AudioFile, Microphone, Recognizer
+from speech_recognition import (
+    AudioData,
+    AudioFile,
+    Microphone,
+    Recognizer,
+    WaitTimeoutError,
+)
 
 DEFAULT_MODEL = "base.en"
 
@@ -9,9 +15,19 @@ class AudioRecorder:
     def __init__(self):
         self.recogniser = Recognizer()
 
-    def record(self) -> AudioData:
+    def record(self, timeout=2, phrase_timeout=5) -> AudioData | None:
+        try:
+            with Microphone() as source:
+                return self.recogniser.listen(
+                    source, timeout=timeout, phrase_time_limit=phrase_timeout
+                )
+
+        except WaitTimeoutError:
+            return None
+
+    def calibrate(self):
         with Microphone() as source:
-            return self.recogniser.listen(source)
+            self.recogniser.adjust_for_ambient_noise(source)
 
     def load_file(self, path: str) -> AudioData:
         with AudioFile(path) as source:
