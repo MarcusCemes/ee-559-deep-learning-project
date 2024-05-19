@@ -1,0 +1,10 @@
+--find-links https://download.pytorch.org/whl/torch_stable.html
+
+contractions==0.1.73
+nltk==3.8.1
+numpy==1.26.3
+pandas==2.2.2
+pyarrow==16.0.0
+torch==2.2+cu121
+tqdm==4.66.2
+transformers==4.40.1
