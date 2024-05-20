@@ -3,7 +3,6 @@ from contextlib import AsyncExitStack
 from signal import signal, SIGINT
 
 from aioconsole import ainput
-from torch import Tensor
 
 from .analysis import Analyser
 from .audio import AudioRecorder, AudioTransformer
@@ -11,18 +10,9 @@ from .robot import Robot
 from .server import Server
 from .state import state
 
-CLASS_LABELS = [
-    "respect",
-    "insult",
-    "humiliate",
-    "status",
-    "dehumanize",
-    "violence",
-    "genocide",
-    "attack_defend",
-]
 
 SAVE_PATH = "tmp/recording.wav"
+SERVER_PORT = 20000
 
 should_stop = False
 
@@ -33,7 +23,7 @@ class Context:
         self.recorder = AudioRecorder()
         self.audio_transformer = AudioTransformer()
         self.robot = Robot()
-        self.server = Server()
+        self.server = Server(SERVER_PORT)
 
     async def __aenter__(self):
         async with AsyncExitStack() as stack:
@@ -65,6 +55,10 @@ async def main():
                         print("Calibrating for ambient noise...")
                         ctx.recorder.calibrate()
 
+                    case "prompt":
+                        prompt = await ainput("Enter prompt: ")
+                        await run(ctx, prompt)
+
                     case "quit":
                         break
 
@@ -72,7 +66,7 @@ async def main():
                         if cmd:
                             print(f"Unknown command: {cmd}")
 
-                        print(f"Available commands: run, quit")
+                        print(f"Available commands: run, calibrate, prompt, quit")
 
             print("Stopping event loop...")
 
@@ -84,63 +78,67 @@ async def main():
             raise e
 
 
-async def run(ctx: Context):
+async def run(ctx: Context, text: str | None = None):
     global should_stop
 
-    print("Recording...")
-    state.status = "recording"
-    state.text = ""
-    await ctx.server.broadcast()
+    if text is None:
 
-    data = await to_thread(ctx.recorder.record)
-
-    if data is None:
-        state.status = "idle"
+        print("Recording...")
+        state.status = "recording"
+        state.text = ""
         await ctx.server.broadcast()
-        print("Recording timed out")
-        return
 
-    if should_stop:
-        return
+        data = await to_thread(ctx.recorder.record)
 
-    await to_thread(ctx.recorder.save_wav, data, SAVE_PATH)
+        if data is None:
+            state.status = "idle"
+            await ctx.server.broadcast()
+            print("Recording timed out")
+            return
 
-    if should_stop:
-        return
+        if should_stop:
+            return
 
-    print("Transcribing and classifying...")
-    state.status = "processing"
-    await ctx.server.broadcast()
+        await to_thread(ctx.recorder.save_wav, data, SAVE_PATH)
 
-    (text, classes) = await to_thread(transcribe_and_classify, ctx)
+        if should_stop:
+            return
 
-    state.sentiments = group_classes(classes)
+        print("Transcribing...")
+        state.status = "processing"
+        await ctx.server.broadcast()
+
+        text = await to_thread(transcribe, ctx)
+
+    print("Classifying...")
+    classes = await to_thread(classify, ctx, text)
+
+    state.sentiments = classes
     await ctx.server.broadcast()
 
     await handle_response(text, classes, ctx)
 
 
-def transcribe_and_classify(ctx: Context) -> tuple[str, Tensor]:
+def transcribe(ctx: Context) -> str:
     (segments, _) = ctx.audio_transformer.transcribe(SAVE_PATH)
 
     text = AudioTransformer.join_segments(segments)
     print(f"Transcription: {text}")
 
+    return text
+
+
+def classify(ctx: Context, text: str) -> dict[str, float]:
     classes = ctx.analyser.classify(text)
-    return (text, classes)
+    print_classes(classes)
+
+    return classes
 
 
-def group_classes(classes: Tensor):
-    [values] = classes.tolist()
-    return [[l, v] for (l, v) in zip(CLASS_LABELS, values)]
+async def handle_response(text: str, classes: dict[str, float], ctx: Context):
+    positive = classes["respect"] >= 0.5
 
-
-async def handle_response(text: str, classes: Tensor, ctx: Context):
-    positive = is_positive(classes)
-    type = "positive" if positive else "negative"
-    print(f"Response: {type}")
-
-    state.status = type
+    state.status = "positive" if positive else "negative"
     state.text = text
     await ctx.server.broadcast()
 
@@ -150,8 +148,9 @@ async def handle_response(text: str, classes: Tensor, ctx: Context):
         await ctx.robot.move_away()
 
 
-def is_positive(classes: Tensor):
-    return classes[0].mean() < 1.0
+def print_classes(classes: dict[str, float]):
+    for label, value in classes.items():
+        print(f"{label}: {value:.2f}")
 
 
 def signal_handler(*_):

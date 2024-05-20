@@ -9,10 +9,11 @@ from .state import state
 
 class Server:
 
-    def __init__(self):
+    def __init__(self, port: int):
         self.app = web.Application()
         self.runner = web.AppRunner(self.app)
         self.sockets = WeakSet()
+        self.port = port
 
         self.app.add_routes(
             [web.get("/ws", self.socket), web.get("/{tail:.*}", self.handle)]
@@ -24,7 +25,7 @@ class Server:
         await self.runner.setup()
         self.runner._shutdown_timeout = 3
 
-        site = web.TCPSite(self.runner, "0.0.0.0", 8080)
+        site = web.TCPSite(self.runner, "0.0.0.0", self.port)
         await site.start()
 
         return self

@@ -14,8 +14,8 @@ TOKENIZER_MAX_LEN = 256
 COLUMNS = [
     "text",
     "sentiment",
-    "hatespeech",
     "hate_speech_score",
+    "hatespeech",
     "respect",
     "insult",
     "humiliate",
@@ -26,7 +26,7 @@ COLUMNS = [
     "attack_defend",
 ]
 
-CLASSES = COLUMNS[4:]
+CLASSES = COLUMNS[3:]
 
 stopwords_downloaded = False
 wordnet_downloaded = False
