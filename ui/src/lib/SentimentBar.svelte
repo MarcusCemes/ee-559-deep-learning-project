@@ -4,7 +4,7 @@
     value: number;
   }
 
-  let { bounds = [-1, 1], value }: Props = $props();
+  let { bounds = [0, 1], value }: Props = $props();
 
   let [min, max] = $derived(bounds);
 

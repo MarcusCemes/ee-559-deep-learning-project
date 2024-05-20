@@ -1,10 +1,11 @@
 import logging
+from logging import info
 from pathlib import Path
 from torch.utils.data import DataLoader, random_split
 
 
 from .dataset import (
-    CLASSES,
+    COLS_CLASSES,
     HateSpeechDataset,
     load_dataset,
     preprocess_dataset,
@@ -20,12 +21,16 @@ DEVICE = "cuda"
 
 DATASET_PATH = "/scratch/izar/cemes/measuring-hate-speech.parquet"
 HATEBERT_PATH = "/scratch/izar/cemes/hateBERT"
-OUTPUT_DIR = "/scratch/izar/cemes/output"
+OUTPUT_DIR = "/scratch/izar/cemes/240520_output"
+
+# DATASET_PATH = "../data/measuring-hate-speech.parquet"
+# HATEBERT_PATH = "../tmp/hateBERT"
+# OUTPUT_DIR = "../tmp/output"
 
 BATCH_SIZE = 64
 LEARNING_RATE = 1e-05
 
-UPDATE_NLTK = False
+UPDATE_NLTK = True
 
 # == Main == #
 
@@ -35,13 +40,13 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-logging.info("Loading BERT")
+info("Loading BERT")
 (tokenizer, model) = load_bert(HATEBERT_PATH)
 
-logging.info("Preparing model")
-model = MultiLabelHateBert(model, len(CLASSES)).to(DEVICE)
+info("Preparing model")
+model = MultiLabelHateBert(model, len(COLS_CLASSES)).to(DEVICE)
 
-logging.info("Preparing dataset")
+info("Preparing dataset")
 dataset = load_dataset(DATASET_PATH)
 dataset = preprocess_dataset(dataset, UPDATE_NLTK)
 dataset = prepare_labels(dataset)
@@ -58,10 +63,18 @@ test_dataloader = DataLoader(
     validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0
 )
 
-logging.info(f"Training dataset length: {len(training_set)}")
-logging.info(f"Validation dataset length: {len(validation_set)}")
+info(f"Training dataset length: {len(training_set)}")
+info(f"Validation dataset length: {len(validation_set)}")
 
-logging.info("Training model")
+info("Training model")
 
 output_dir = Path(OUTPUT_DIR)
-train(model, train_dataloader, LEARNING_RATE, EPOCHS, output_dir, DEVICE)
+train(
+    model,
+    train_dataloader,
+    test_dataloader,
+    LEARNING_RATE,
+    EPOCHS,
+    output_dir,
+    DEVICE,
+)

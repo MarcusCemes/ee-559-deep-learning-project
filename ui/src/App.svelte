@@ -15,15 +15,6 @@
 
   let connection = $state<Connection>();
 
-  // let { sentiments, status, text } = $state<Data>({
-  //   sentiments: [
-  //     ["happy", 0.5],
-  //     ["offensive", 2.0],
-  //   ],
-  //   status: "idle",
-  //   text: "A message here",
-  // });
-
   function isActive(connection: Connection) {
     return [ConnectionState.Connecting, ConnectionState.Connected].includes(
       connection.status

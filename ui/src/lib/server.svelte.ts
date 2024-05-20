@@ -6,7 +6,7 @@ export enum ConnectionState {
 }
 
 export interface Message {
-  sentiments: [string, number][];
+  sentiments: Record<string, number>;
   status: string;
   text: string;
 }

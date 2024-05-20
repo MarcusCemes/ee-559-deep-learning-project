@@ -2,13 +2,15 @@
   import SentimentBar from "./SentimentBar.svelte";
 
   interface Props {
-    sentiments: [string, number][];
+    sentiments: Record<string, number>;
   }
 
   let { sentiments }: Props = $props();
 
-  let min = $derived(Math.min(...sentiments.map(([_, value]) => value)));
-  let max = $derived(Math.max(...sentiments.map(([_, value]) => value)));
+  let entries = $derived(Object.entries(sentiments));
+
+  let min = $derived(Math.min(...entries.map(([_, value]) => value)));
+  let max = $derived(Math.max(...entries.map(([_, value]) => value)));
   let bounds = $derived([min, max] as [number, number]);
 
   function formatValue(value: number) {
@@ -18,7 +20,7 @@
 </script>
 
 <div class:grid={sentiments.length > 0}>
-  {#each sentiments as [name, value]}
+  {#each entries as [name, value]}
     <div class="name">{name}</div>
 
     <div class="bar">

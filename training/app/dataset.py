@@ -2,20 +2,20 @@ import re
 
 import contractions
 import nltk
+import torch
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from pandas import DataFrame, read_parquet
-import torch
 from torch import tensor
 from torch.utils.data import Dataset
 
 TOKENIZER_MAX_LEN = 256
 
-COLUMNS = [
-    "text",
-    "sentiment",
-    "hate_speech_score",
-    "hatespeech",
+COL_SCORE = "hate_speech_score"
+
+COL_TEXT = "text"
+
+COLS_CLASSES = [
     "respect",
     "insult",
     "humiliate",
@@ -26,7 +26,6 @@ COLUMNS = [
     "attack_defend",
 ]
 
-CLASSES = COLUMNS[3:]
 
 stopwords_downloaded = False
 wordnet_downloaded = False
@@ -37,8 +36,6 @@ class HateSpeechDataset(Dataset):
 
         self.tokenizer = tokenizer
         self.dataset = dataset
-        self.text = dataset.text
-        self.targets = self.dataset.labels
         self.device = device
 
     def __len__(self):
@@ -46,7 +43,7 @@ class HateSpeechDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        text = str(self.text.iloc[idx])
+        text = str(self.dataset[COL_TEXT].iloc[idx])
 
         encoding = self.tokenizer.encode_plus(
             text,
@@ -61,18 +58,21 @@ class HateSpeechDataset(Dataset):
         mask = encoding["attention_mask"]
         token_type_ids = encoding["token_type_ids"]
 
+        target = self.dataset[COL_SCORE].values[idx]
+        targets = self.dataset[COLS_CLASSES].values[idx]
+
         return {
             "input_ids": tensor(ids, dtype=torch.long),
             "attention_mask": tensor(mask, dtype=torch.long),
             "token_type_ids": tensor(token_type_ids, dtype=torch.long),
-            "targets": tensor(self.targets.iloc[idx], dtype=torch.float).to(
-                self.device
-            ),
+            "target": tensor(target, dtype=torch.float).to(self.device),
+            "labels": tensor(targets, dtype=torch.float).to(self.device),
         }
 
 
 def load_dataset(path):
-    return read_parquet(path)[COLUMNS]
+    columns = [*COLS_CLASSES, COL_SCORE, COL_TEXT]
+    return read_parquet(path)[columns]
 
 
 # == Text preprocessing == #
@@ -143,10 +143,13 @@ def _lemmatize_words(text, update_nltk: bool):
 
 
 def prepare_labels(dataset: DataFrame) -> DataFrame:
-    for column in CLASSES:
+
+    dataset[COL_SCORE] = dataset[COL_SCORE].apply(lambda x: 1 if x >= 0.5 else 0)
+
+    for column in COLS_CLASSES:
         dataset[column] = dataset[column].apply(lambda x: 1 if x > 0 else 0)
 
-    # Create a new column with the labels as a list
-    dataset["labels"] = dataset[CLASSES].values.tolist()
+    dataset["target"] = dataset[COL_SCORE].values.tolist()
+    dataset["labels"] = dataset[COLS_CLASSES].values.tolist()
 
     return dataset
