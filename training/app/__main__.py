@@ -16,12 +16,15 @@ from .train import train
 
 # == Configurations == #
 
-EPOCHS = 20
+VERSION = 1
+
+EPOCHS = 10
 DEVICE = "cuda"
 
 DATASET_PATH = "/scratch/izar/cemes/measuring-hate-speech.parquet"
-HATEBERT_PATH = "/scratch/izar/cemes/hateBERT"
-OUTPUT_DIR = "/scratch/izar/cemes/240520_output"
+# HATEBERT_PATH = "/scratch/izar/cemes/hateBERT"
+HATEBERT_PATH = None
+OUTPUT_DIR = "/scratch/izar/cemes/240522_output"
 
 # DATASET_PATH = "../data/measuring-hate-speech.parquet"
 # HATEBERT_PATH = "../tmp/hateBERT"
@@ -39,6 +42,8 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+info(f"Starting training script v{VERSION}")
 
 info("Loading BERT")
 (tokenizer, model) = load_bert(HATEBERT_PATH)

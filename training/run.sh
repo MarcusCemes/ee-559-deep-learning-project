@@ -13,4 +13,4 @@
 
 source .venv/bin/activate
 
-srun python3 -m app
+srun python3 -m training.app
