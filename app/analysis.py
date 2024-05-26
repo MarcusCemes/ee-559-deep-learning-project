@@ -1,57 +1,91 @@
 from torch import Tensor, argmax, load, no_grad
-from torch.nn import Dropout, Linear, Module, Softmax
-from transformers import BertConfig, BertModel, BertTokenizer
+from torch.nn import Dropout, Linear, Module
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    BertConfig,
+    BertModel,
+)
 
 DEVICE = "cuda"
+BERT_MODEL = "distilbert-base-uncased"
 HATEBERT_PATH = "./tmp/hateBERT"
-MULTI_WEIGHTS_PATH = "./tmp/checkpoint_2024-05-21"
+MULTI_WEIGHTS_PATH = "./tmp/multilabel_bert_five_epochs.pth"
 BINARY_WEIGHTS_PATH = "./tmp/base_model_bert_two_epoch.pth"
 
-CLASSES = [
-    "respect",
-    "insult",
-    "humiliate",
-    "status",
-    "dehumanize",
-    "violence",
-    "genocide",
-    "attack_defend",
-]
+
+ID2LABEL = {
+    0: "race",
+    1: "religion",
+    2: "origin",
+    3: "gender",
+    4: "sexuality",
+    5: "age",
+    6: "disability",
+}
+
+LABEL2ID = {
+    "race": 0,
+    "religion": 1,
+    "origin": 2,
+    "gender": 3,
+    "sexuality": 4,
+    "age": 5,
+    "disability": 6,
+}
 
 
 class Analyser:
 
     def __init__(self):
-        self.tokenizer = BertTokenizer.from_pretrained(HATEBERT_PATH)
+        self.mtokenizer = AutoTokenizer.from_pretrained(BERT_MODEL)
 
-        config = BertConfig.from_pretrained(f"{HATEBERT_PATH}/config.json")
+        self.mmodel = AutoModelForSequenceClassification.from_pretrained(
+            BERT_MODEL,
+            problem_type="multi_label_classification",
+            num_labels=len(LABEL2ID),
+            label2id=LABEL2ID,
+            id2label=ID2LABEL,
+        )
 
-        self.mmodel = MultilabelHateBert(BertModel(config), len(CLASSES))
         self.mmodel.load_state_dict(load(MULTI_WEIGHTS_PATH))
         self.mmodel.to(DEVICE)
         self.mmodel.eval()
 
-        self.bmodel = BinaryHateBert(BertModel(config))
+        self.btokenizer = AutoTokenizer.from_pretrained(HATEBERT_PATH)
+
+        bconfig = BertConfig.from_pretrained(f"{HATEBERT_PATH}/config.json")
+        self.bmodel = BinaryHateBert(BertModel(bconfig))
         self.bmodel.load_state_dict(load(BINARY_WEIGHTS_PATH))
         self.bmodel.to(DEVICE)
         self.bmodel.eval()
 
     def classify(self, text: str) -> tuple[bool, dict[str, float]]:
-        input = self.tokenizer(text, padding=True, truncation=True, return_tensors="pt")
-        input.to(DEVICE)
+        binput = self.btokenizer(
+            text, padding=True, truncation=True, return_tensors="pt"
+        )
+        minput = self.mtokenizer(
+            text, padding=True, truncation=True, return_tensors="pt"
+        )
+
+        binput.to(DEVICE)
+        minput.to(DEVICE)
 
         with no_grad():
-            _, output_multi = self.mmodel(**input)
-            output_binary = self.bmodel(**input)
+            output_binary = self.bmodel(**binput)
+            output_multi = self.mmodel(**minput)
 
-            sentiments = {c: output_multi[0][i].item() for i, c in enumerate(CLASSES)}
-            is_hate_speech = bool(argmax(output_binary[0]))
+            sentiments = {
+                ID2LABEL[key]: output_multi[0].squeeze()[key].item() for key in ID2LABEL
+            }
+
+            is_hate_speech = bool(argmax(output_binary.squeeze()).item())
 
             return is_hate_speech, sentiments
 
 
 class BinaryHateBert(Module):
-    def __init__(self, bert_model: BertModel):
+    def __init__(self, bert_model: Module):
         super(BinaryHateBert, self).__init__()
 
         self.bertmodel = bert_model
@@ -70,26 +104,19 @@ class BinaryHateBert(Module):
 
 class MultilabelHateBert(Module):
 
-    def __init__(self, bert_model: BertModel, outputs: int):
+    def __init__(self, bert_model: Module, outputs: int):
         super(MultilabelHateBert, self).__init__()
 
         self.bert_model = bert_model
         self.dropout = Dropout(0.3)
-        self.binary = Linear(768, 1)
         self.multi = Linear(768, outputs)
-        self.softmax = Softmax(dim=1)
 
-    def forward(
-        self, input_ids, attention_mask, token_type_ids
-    ) -> tuple[Tensor, Tensor]:
+    def forward(self, input_ids, attention_mask, token_type_ids) -> Tensor:
         out = self.bert_model(
             input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
         )
+
         out = self.dropout(out.pooler_output)
+        out = self.multi(out)
 
-        output_binary = self.binary(out)
-
-        output_multi = self.multi(out)
-        output_multi = self.softmax(output_multi)
-
-        return output_binary, output_multi
+        return out

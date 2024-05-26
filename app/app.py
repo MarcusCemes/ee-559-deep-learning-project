@@ -1,6 +1,7 @@
 from asyncio import sleep, to_thread
 from contextlib import AsyncExitStack
 from signal import SIGINT, signal
+from time import time
 
 from aioconsole import ainput
 
@@ -141,12 +142,14 @@ async def run(ctx: Context, text: str | None = None):
         print("🗣️ Transcription:", text)
 
     print("🤔 Classifying...")
+    start = time()
     is_hate_speech, sentiments = await to_thread(classify, ctx, text)
 
+    print(f"⏱️ Elapsed: {1000 * (time() - start):.0f}ms")
     if is_hate_speech:
         print(f"🚫 Hate speech detected")
     else:
-        print(f"✅ Positive sentiment")
+        print(f"✅ No hate speech detected")
 
     print_classes(sentiments)
 
@@ -187,7 +190,7 @@ async def handle_response(text: str, is_hate_speech: bool, ctx: Context):
 
 def print_classes(classes: dict[str, float]):
     for label, value in classes.items():
-        print(f"{label}: {value:.2f}")
+        print(f"   {label}: {value:.2f}")
 
 
 def signal_handler(*_):
