@@ -9,7 +9,7 @@
 
   let { message }: Props = $props();
 
-  let { sentiments, status, text } = $derived(message);
+  let { attributions, sentiments, status, text } = $derived(message);
 
   let color = $derived(getColour());
 
@@ -25,7 +25,7 @@
 </script>
 
 <h1 style:color>{status}</h1>
-<h2><Text {text} tones={{ very: 2, long: 1 }} /></h2>
+<h2><Text {text} tones={attributions} /></h2>
 <Sentiments {sentiments} />
 
 <style>

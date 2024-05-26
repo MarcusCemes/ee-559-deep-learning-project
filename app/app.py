@@ -11,6 +11,7 @@ from .robot import Color, Robot, Sound
 from .server import Server
 from .state import state
 
+INTERPRET = True
 PLAY_SOUNDS = True
 SAVE_PATH = "tmp/recording.wav"
 SERVER_PORT = 8080
@@ -20,7 +21,7 @@ should_stop = False
 
 class Context:
     def __init__(self):
-        self.analyser = Analyser()
+        self.analyser = Analyser(INTERPRET)
         self.recorder = AudioRecorder()
         self.audio_transformer = AudioTransformer()
         self.robot = Robot(PLAY_SOUNDS)
@@ -144,6 +145,9 @@ async def run(ctx: Context, text: str | None = None):
     print("🤔 Classifying...")
     start = time()
     is_hate_speech, sentiments = await to_thread(classify, ctx, text)
+
+    print("🔍 Interpreting words...")
+    state.attributions = await to_thread(ctx.analyser.interpret, text)
 
     print(f"⏱️ Elapsed: {1000 * (time() - start):.0f}ms")
     if is_hate_speech:

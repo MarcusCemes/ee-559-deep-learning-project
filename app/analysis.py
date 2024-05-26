@@ -1,18 +1,23 @@
+from lime.lime_text import LimeTextExplainer
 from torch import Tensor, argmax, load, no_grad
 from torch.nn import Dropout, Linear, Module
+from torch.nn import functional as F
 from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     BertConfig,
     BertModel,
+    pipeline,
 )
 
 DEVICE = "cuda"
+
 BERT_MODEL = "distilbert-base-uncased"
 HATEBERT_PATH = "./tmp/hateBERT"
 MULTI_WEIGHTS_PATH = "./tmp/multilabel_bert_five_epochs.pth"
 BINARY_WEIGHTS_PATH = "./tmp/base_model_bert_two_epoch.pth"
 
+INTERPRET_SAMPLES = 50
 
 ID2LABEL = {
     0: "race",
@@ -37,7 +42,7 @@ LABEL2ID = {
 
 class Analyser:
 
-    def __init__(self):
+    def __init__(self, interpret=True):
         self.mtokenizer = AutoTokenizer.from_pretrained(BERT_MODEL)
 
         self.mmodel = AutoModelForSequenceClassification.from_pretrained(
@@ -59,6 +64,10 @@ class Analyser:
         self.bmodel.load_state_dict(load(BINARY_WEIGHTS_PATH))
         self.bmodel.to(DEVICE)
         self.bmodel.eval()
+
+        self.interpreter = (
+            Interpreter(self.mmodel, self.mtokenizer) if interpret else None
+        )
 
     def classify(self, text: str) -> tuple[bool, dict[str, float]]:
         binput = self.btokenizer(
@@ -82,6 +91,62 @@ class Analyser:
             is_hate_speech = bool(argmax(output_binary.squeeze()).item())
 
             return is_hate_speech, sentiments
+
+    def interpret(self, text: str):
+        if not self.interpreter:
+            return {}
+
+        return self.interpreter.interpret(text)
+
+
+class Interpreter:
+
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+
+        class_names = [ID2LABEL[i] for i in range(len(ID2LABEL))]
+
+        self.explainer = LimeTextExplainer(
+            class_names=class_names, split_expression="\\s+", bow=False
+        )
+
+        self.pipeline = pipeline(
+            task="text-classification",
+            model=model,
+            tokenizer=tokenizer,
+            device="cuda",
+            top_k=None,
+        )
+
+    def interpret(self, instance: str) -> dict[str, float]:
+        attributions = {}
+
+        exp = self.explainer.explain_instance(
+            instance, self._predictor, num_features=200, num_samples=INTERPRET_SAMPLES
+        )
+
+        explanation_dict = dict(list(exp.as_map().values())[0])
+        tokens = instance.split(" ")
+
+        for i in range(len(tokens)):
+            attributions[tokens[i]] = explanation_dict[i]
+
+        return attributions
+
+    def _predictor(self, texts):
+        encodings = self.tokenizer(
+            texts,
+            padding="max_length",
+            truncation=True,
+            max_length=256,
+            return_tensors="pt",
+        ).to(DEVICE)
+
+        logits = self.model(**encodings).logits
+        probabilities = F.softmax(logits, dim=1)
+
+        return probabilities.cpu().detach().numpy()
 
 
 class BinaryHateBert(Module):
