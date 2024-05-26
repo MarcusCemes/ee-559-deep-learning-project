@@ -14,12 +14,12 @@
   let bounds = $derived([min, max] as [number, number]);
 
   function formatValue(value: number) {
-    const sign = value > 0 ? "+" : "";
+    const sign = value > 0.5 ? "+" : "";
     return `${sign}${value.toFixed(2)}`;
   }
 </script>
 
-<div class:grid={sentiments.length > 0}>
+<div class:grid={entries.length > 0}>
   {#each entries as [name, value]}
     <div class="name">{name}</div>
 

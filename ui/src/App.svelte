@@ -1,25 +1,12 @@
 <script lang="ts">
   import Message from "./lib/Message.svelte";
-  import Sentiments from "./lib/Sentiments.svelte";
   import {
     ConnectionState,
     connect,
     type Connection,
   } from "./lib/server.svelte";
 
-  interface Data {
-    sentiments: [string, number][];
-    status: string;
-    text: string;
-  }
-
   let connection = $state<Connection>();
-
-  function isActive(connection: Connection) {
-    return [ConnectionState.Connecting, ConnectionState.Connected].includes(
-      connection.status
-    );
-  }
 
   function onclick() {
     connection = connect();
