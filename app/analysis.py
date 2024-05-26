@@ -17,7 +17,7 @@ HATEBERT_PATH = "./tmp/hateBERT"
 MULTI_WEIGHTS_PATH = "./tmp/multilabel_bert_five_epochs.pth"
 BINARY_WEIGHTS_PATH = "./tmp/base_model_bert_two_epoch.pth"
 
-INTERPRET_SAMPLES = 50
+INTERPRET_SAMPLES = 30
 
 ID2LABEL = {
     0: "race",
@@ -96,7 +96,11 @@ class Analyser:
         if not self.interpreter:
             return {}
 
-        return self.interpreter.interpret(text)
+        try:
+            return self.interpreter.interpret(text)
+
+        except Exception:
+            return {}
 
 
 class Interpreter:
@@ -130,7 +134,8 @@ class Interpreter:
         tokens = instance.split(" ")
 
         for i in range(len(tokens)):
-            attributions[tokens[i]] = explanation_dict[i]
+            if i in explanation_dict:
+                attributions[tokens[i]] = explanation_dict[i]
 
         return attributions
 

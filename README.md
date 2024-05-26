@@ -2,9 +2,9 @@
 
 _EE-559 Deep Learning @ EPFL_
 
-Authors: Marcus Cemes, Osman Kiziltug, Lluka Stojollari
+**Authors**: Marcus Cemes, Osman Kiziltug, Lluka Stojollari
 
-Hate speech detection is a vast and increasingly relevant topic in the digital age, where the easy access and anonymity of online communication could be playing a role in transforming the way we interact and express ourselves \cite{online-offline-hate}. A limitation in the current landscape is that many models are trained on datasets sourced from online social media platforms where this type of detection is already employed and are often subject to abbreviated writing styles and internet slang.
+Hate speech detection is a vast and increasingly relevant topic in the digital age, where the easy access and anonymity of online communication could be playing a role in transforming the way we interact and express ourselves {online-offline-hate. A limitation in the current landscape is that many models are trained on datasets sourced from online social media platforms where this type of detection is already employed and are often subject to abbreviated writing styles and internet slang.
 
 In this project, we asked ourselves the following question: **how well would the currently employed techniques and available datasets translate into a more physical experience**? More specifically, we wanted to investigate the feasibility of a robotics learning system that could engage in a limited form of free "conversation" with a user, exhibiting a sentiment-based actuation based on the user’s input, such as moving away or shaking its head in dismayed response to what is perceived as detected hate speech.
 

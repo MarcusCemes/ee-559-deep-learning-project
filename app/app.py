@@ -135,7 +135,7 @@ async def run(ctx: Context, text: str | None = None):
         await ctx.robot.play_sound(Sound.Confirm)
         await ctx.robot.circle(False)
 
-        state.status = "processing"
+        state.status = "thinking"
         await ctx.server.broadcast()
 
         text = await to_thread(transcribe, ctx)
@@ -165,11 +165,7 @@ async def run(ctx: Context, text: str | None = None):
 
 def transcribe(ctx: Context) -> str:
     (segments, _) = ctx.audio_transformer.transcribe(SAVE_PATH)
-
-    text = AudioTransformer.join_segments(segments)
-    print(f"🗣️ Transcription: {text}")
-
-    return text
+    return AudioTransformer.join_segments(segments)
 
 
 def classify(ctx: Context, text: str) -> tuple[bool, dict[str, float]]:

@@ -1,4 +1,5 @@
 from typing import Iterable
+
 from faster_whisper.transcribe import Segment
 from speech_recognition import (
     AudioData,
@@ -15,7 +16,7 @@ class AudioRecorder:
     def __init__(self):
         self.recogniser = Recognizer()
 
-    def record(self, timeout=2, phrase_timeout=5) -> AudioData | None:
+    def record(self, timeout=2, phrase_timeout=10) -> AudioData | None:
         try:
             with Microphone() as source:
                 return self.recogniser.listen(
