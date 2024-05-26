@@ -1,5 +1,6 @@
 <script lang="ts">
   import Sentiments from "./Sentiments.svelte";
+  import Text from "./Text.svelte";
   import type { Message } from "./server.svelte";
 
   interface Props {
@@ -24,7 +25,7 @@
 </script>
 
 <h1 style:color>{status}</h1>
-<h2>{text}</h2>
+<h2><Text {text} tones={{ very: 2, long: 1 }} /></h2>
 <Sentiments {sentiments} />
 
 <style>
@@ -35,5 +36,6 @@
 
   h2 {
     font-size: 2rem;
+    text-align: center;
   }
 </style>

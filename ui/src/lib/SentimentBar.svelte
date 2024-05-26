@@ -4,6 +4,8 @@
     value: number;
   }
 
+  const MID = 0.5;
+
   let { bounds = [0, 1], value }: Props = $props();
 
   let [min, max] = $derived(bounds);
@@ -16,8 +18,8 @@
   function computeColour() {
     let [h, s, l] =
       boundedValue >= 0
-        ? [81, (81 * boundedValue) / max, 44]
-        : [0, (84 * boundedValue) / min, 60];
+        ? [81, (81 * (boundedValue - MID)) / max, 44]
+        : [0, (84 * (boundedValue - MID)) / min, 60];
 
     return `hsl(${h}, ${s}%, ${l}%)`;
   }
@@ -26,8 +28,9 @@
     let l = 0.5;
     let r = 0.5;
 
-    if (boundedValue >= 0) r -= Math.min(0.5, boundedValue / max);
-    else l -= Math.min(0.5, boundedValue / min);
+    if (boundedValue >= MID)
+      r -= Math.min(1.0, (0.5 * (boundedValue - MID)) / (max - MID));
+    else l -= Math.min(1.0, (0.5 * (boundedValue - MID)) / (min - MID));
 
     return { left: `${100 * l}%`, right: `${100 * r}%` };
   }

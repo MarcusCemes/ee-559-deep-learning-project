@@ -28,10 +28,12 @@ class Server:
         site = web.TCPSite(self.runner, "0.0.0.0", self.port)
         await site.start()
 
+        print(f"🚀 Server running on http://localhost:{self.port}")
+
         return self
 
     async def __aexit__(self, *_):
-        print("Stopping server...")
+        print("🤚 Stopping server...")
         await self.runner.cleanup()
 
     async def on_shutdown(self, _):
@@ -44,7 +46,7 @@ class Server:
 
     async def handle(self, request: web.Request):
         path = "/index.html" if request.path == "/" else request.path
-        path = f"assets{path}"
+        path = "ui/dist" + path
 
         if ".." in path:
             raise web.HTTPForbidden()
