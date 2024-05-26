@@ -80,11 +80,11 @@ async def main():
                         break
 
                     case cmd:
-                        if cmd:
+                        if cmd not in ["", "help"]:
                             print(f"⚠️ Unknown command: {cmd}")
 
                         print(
-                            f"❓ Available commands: calibrate, clear, loop, prompt, run, warmup, quit"
+                            f"❓ Available commands: calibrate, clear, help, loop, prompt, run, warmup, quit"
                         )
 
             print("🤚 Stopping event loop...")
